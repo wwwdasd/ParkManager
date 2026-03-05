@@ -2,11 +2,15 @@
 
 #include<stdio.h>
 #include<string.h>
+#include<stdlib.h>
 
 void add(FILE* f);
 void del(FILE* f);
 void edit(FILE* f);
 void list(FILE* f);
+
+
+
 
 int main() {
 	int start_sign,flag=1;
@@ -26,7 +30,7 @@ int main() {
 	while (flag)
 	{
 		printf("\t\t\t  停车场管理系统\n");
-		printf("输入数字选择模式：\n\t1.增加车牌，2更改车牌，3.删除车牌，4.查询车牌，5.退出 \n");
+		printf("输入数字选择模式：\n\t1.增加车牌，2更改车牌，3.删除车牌，4.查询车牌，5.清空当前屏幕，6.退出 \n");
 		scanf("%d",&start_sign);
 
 		switch (start_sign){
@@ -55,6 +59,9 @@ int main() {
 			fr = fopen("CarKey.txt", "r+");
 			break;
 		case 5:
+			system("cls");
+			break;
+		case 6:
 			flag = 0;
 			printf("程序退出");
 			fclose(fr);
@@ -71,13 +78,46 @@ int main() {
 
 void add(FILE* f)
 {
-	f = fopen("CarKey.txt", "a");
+	FILE* fa = fopen("CarKey.txt", "a");
 	char carKey[200];
-	printf("请输入车牌：");
+	printf("\n请输入车牌：");
 	scanf("%s",carKey);
-	fprintf(f, "%s\n", carKey);
-	printf("success\n");
-	fflush(f);
+
+	rewind(f);
+	char buf[1024];
+	int flag=0;
+
+	while (fgets(buf, sizeof(buf), f))
+	{
+		if (strstr(buf, carKey))
+		{
+			flag = 1;
+			break;
+		}
+		else
+		{
+			flag = 0;
+		}
+
+	}
+
+	//输入校验（车牌7位）
+	if ( strlen(carKey) != 8 || strncmp("辽",carKey,1)) 
+	{
+
+		printf("\n** 请输入正确车牌 **\n");
+	}
+	else if (flag == 1)
+	{
+		printf("\n** 车牌已存在 **\n");
+	}
+	else
+	{
+		fprintf(fa, "%s\n", carKey);
+		printf("success\n");
+	}
+
+	fflush(fa);
 }
 
 void del(FILE* f)
@@ -91,25 +131,86 @@ void del(FILE* f)
 		ftmp = fopen("tmp.txt", "w");
 	}
 
-	printf("请输入要删除的车牌：");
+	printf("\n请输入要删除的车牌：");
 	scanf("%s", carKey);
 
-	rewind(f);
-
-	while (fgets(buf, sizeof(buf), f))
+	//车牌校验
+	if (strlen(carKey) == 8 || !strncmp("辽", carKey, 1))
 	{
-		if (!strstr(buf, carKey))
+		//查找是否存在，借用list();
+
+		rewind(f);
+		char buf[1024];
+		int flag = 0;
+
+		while (fgets(buf, sizeof(buf), f))
 		{
-			fputs(buf, ftmp);
+			if (strstr(buf, carKey)) 
+			{
+				flag = 1;
+				break;
+			}
+			else
+			{
+				flag = 0;
+			}
+
 		}
+
+		if (flag==1)
+		{
+			//指针回到文件最前端
+			rewind(f);
+
+			//删除确认
+			printf("确认删除吗 Y/N :");
+			getchar();
+			char YN;
+			scanf("%c", &YN);
+
+			switch (YN)
+			{
+				case 'Y':
+				case 'y':
+
+					rewind(f);
+
+					while (fgets(buf, sizeof(buf), f))
+					{
+						if (!strstr(buf, carKey))
+						{
+							fputs(buf, ftmp);
+						}
+					}
+					printf("success\n");
+					break;
+
+				default:
+					printf("\n取消删除\n");
+					break;
+			}
+		}
+		else
+		{
+			printf("\n**未找到该车牌，请确认车牌是否正确**\n\n");
+		}
+		
 	}
+	else 
+	{
+		printf("\n** 请输入正确车牌 **\n");
+	}
+
 	fclose(ftmp);
 	fclose(f);
 
 	remove("CarKey.txt");
 	rename("tmp.txt", "CarKey.txt");
-	printf("success\n");
-	freopen("CarKey.txt", "r+", f);
+	
+
+	f = fopen("CarKey.txt", "r+");
+
+	fflush(f);
 }
 
 void edit(FILE* f)
@@ -124,41 +225,67 @@ void edit(FILE* f)
 		ftmp = fopen("tmp.txt", "w");
 	}
 
-	printf("请输入旧的车牌：");
+	printf("\n请输入旧的车牌：");
 	scanf("%s", oldCarKey);
-	printf("请输入新的车牌：");
+	printf("\n请输入新的车牌：");
 	scanf("%s", newCarKey);
 
 	rewind(f);
+	int flag = 0;
 
-	//调用删除
 	while (fgets(buf, sizeof(buf), f))
 	{
-		if (!strstr(buf, oldCarKey))
+		if (strstr(buf, newCarKey))
 		{
-			fputs(buf, ftmp);
+			flag = 1;
+			break;
 		}
-	}
-	//写入新车牌
-	fprintf(ftmp, "%s", newCarKey);
-	//关闭
-	fclose(ftmp);
-	fclose(f);
+		else
+		{
+			flag = 0;
+		}
 
-	remove("CarKey.txt");
-	rename("tmp.txt", "CarKey.txt");
-	printf("success\n");
-	freopen("CarKey.txt", "r+", f);
+	}
+
+	rewind(f);
+	if (strlen(newCarKey) != 8 || strncmp("辽", newCarKey, 1))
+	{
+		printf("\n** 请输入正确车牌 **\n");
+	}
+	else if (flag==1)
+	{
+		printf("\n** 该车牌已存在 **\n");
+	}
+	else
+	{	
+		//调用删除
+		while (fgets(buf, sizeof(buf), f))
+		{
+			if (!strstr(buf, oldCarKey))
+			{
+				fputs(buf, ftmp);
+			}
+		}
+		//写入新车牌
+		fprintf(ftmp, "%s", newCarKey);
+		//关闭
+		fclose(ftmp);
+		fclose(f);
+
+		remove("CarKey.txt");
+		rename("tmp.txt", "CarKey.txt");
+		printf("success\n");
+		freopen("CarKey.txt", "r+", f);
+	}
 }
 
 void list(FILE* f) {
 	rewind(f);
 	char buf[1024];
-	printf("车牌列表：\n");
+	printf("\n车牌列表：\n");
 	while (fgets(buf, sizeof(buf), f))
 	{
 		printf(buf);
 	}
-	printf("\n\nsuccess\n");
+	printf("\n\n\n");
 }
-
